@@ -76,63 +76,14 @@ public class InvestorServiceImpl implements InvestorService {
                                         && request.getWithdrawalAmount() < product.getCurrentBalance()
                                         && (allowedPercentageToWithdraw(request, product))) {
                                     //TODO: create a withdrawal notification for retirement and the status should be in-progress
-
-                                    request.setProductType(ProductType.RETIREMENT);
-                                    request.setWithdrawalDate(LocalDate.now());
-                                    investor.getWithdrawalRequest().add(request);
-
                                     WithdrawalNotice withdrawalNotice = withdrawal_notice(product, request);
-
-                                    MailStructure mailStructure = new MailStructure();
-                                    mailStructure.setSubject("Testing");
-
-                                    mailStructure.setMessage("*Withdrawal notification*\n\n"
-                                            + "Current balance : " + withdrawalNotice.getCurrentBalance() + "\n"
-                                            + "Amount withdrawn : " + withdrawalNotice.getAmountWithdrawn() + "\n"
-                                            + "Paid To : " + request.getAccountNumber() + "\n"
-                                            + "Closing balance : " + withdrawalNotice.getClosingBalance());
-
-                                    emailSenderService.sendEmail("lutendo.damuleli.f@gmail.com", mailStructure);
-
-                                    investor.getProducts().get(product.getProductId().intValue() - 1)
-                                            .setCurrentBalance(withdrawalNotice.getClosingBalance());
-                                    investor.getProducts().get(product.getProductId().intValue() - 1)
-                                            .setPreviousBalance(withdrawalNotice.getCurrentBalance());
-                                    request.setClosingAmount(withdrawalNotice.getClosingBalance());
-
-
-                                    investorRepository.save(investor);
-
+                                    finalWithdrawalRequest(investor, withdrawalNotice,request, product);
                                     return null;
                                 }
                             } else {
                                 //TODO: create a withdrawal notification for savings in-progress
-                                request.setProductType(ProductType.SAVINGS);
-                                request.setWithdrawalDate(LocalDate.now());
-                                investor.getWithdrawalRequest().add(request);
-
                                 WithdrawalNotice withdrawalNotice = withdrawal_notice(product, request);
-
-                                MailStructure mailStructure = new MailStructure();
-                                mailStructure.setSubject("Testing");
-
-                                mailStructure.setMessage("*Withdrawal notification*\n\n"
-                                        + "Current balance : " + withdrawalNotice.getCurrentBalance() + "\n"
-                                        + "Amount withdrawn : " + withdrawalNotice.getAmountWithdrawn() + "\n"
-                                        + "Paid To : " + request.getAccountNumber() + "\n"
-                                        + "Closing balance : " + withdrawalNotice.getClosingBalance());
-
-                                emailSenderService.sendEmail("lutendo.damuleli.f@gmail.com", mailStructure);
-
-                                investor.getProducts().get(product.getProductId().intValue() - 1)
-                                        .setCurrentBalance(withdrawalNotice.getClosingBalance());
-                                investor.getProducts().get(product.getProductId().intValue() - 1)
-                                        .setPreviousBalance(withdrawalNotice.getCurrentBalance());
-                                request.setClosingAmount(withdrawalNotice.getClosingBalance());
-
-
-                                investorRepository.save(investor);
-
+                                finalWithdrawalRequest(investor, withdrawalNotice,request, product);
                                 return null;
                             }
                         }
@@ -146,6 +97,40 @@ public class InvestorServiceImpl implements InvestorService {
 
         }
         return null;
+    }
+
+    public void finalWithdrawalRequest(Investor investor,
+                                       WithdrawalNotice withdrawalNotice,
+                                       WithdrawalRequest request,
+                                       Product product){
+        if(product.getType().equals(ProductType.RETIREMENT))
+            request.setProductType(ProductType.RETIREMENT);
+        else
+            request.setProductType(ProductType.SAVINGS);
+        request.setWithdrawalDate(LocalDate.now());
+        investor.getWithdrawalRequest().add(request);
+
+        sendEmailNotification(withdrawalNotice, request);
+
+        investor.getProducts().get(product.getProductId().intValue() - 1)
+                .setCurrentBalance(withdrawalNotice.getClosingBalance());
+        investor.getProducts().get(product.getProductId().intValue() - 1)
+                .setPreviousBalance(withdrawalNotice.getCurrentBalance());
+        request.setClosingAmount(withdrawalNotice.getClosingBalance());
+        investorRepository.save(investor);
+    }
+
+    public void sendEmailNotification(WithdrawalNotice notice, WithdrawalRequest request){
+        MailStructure mailStructure = new MailStructure();
+        mailStructure.setSubject("Testing");
+
+        mailStructure.setMessage("*Withdrawal notification*\n\n"
+                + "Current balance : " + notice.getCurrentBalance() + "\n"
+                + "Amount withdrawn : " + notice.getAmountWithdrawn() + "\n"
+                + "Paid To : " + request.getAccountNumber() + "\n"
+                + "Closing balance : " + notice.getClosingBalance());
+
+        emailSenderService.sendEmail("lutendo.damuleli.f@gmail.com", mailStructure);
     }
 
     public WithdrawalNotice withdrawal_notice(Product product, WithdrawalRequest request ){
