@@ -1,2 +1,2 @@
-# investments
-Automating the withdrawal notice process for domain investors
+# investment
+Application to automate the withdrawal process for investors
